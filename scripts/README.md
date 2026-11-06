@@ -8,7 +8,7 @@
 | `check-headers-file.sh` | This script checks the headers if you are in a production environment.                                                                |
 | `diff_l10n_branches.py` | This script generates a report of outdated contents in `content/<l10n-lang>` directory by comparing two l10n team milestone branches. |
 | `fetch_kubecon_events.py` | This script fetches upcoming KubeCon events from the Linux Foundation calendar and writes `data/events/kubecon.yaml`.               |
-| `l10n-outdatedness-triage.py` | This script compares localized Markdown files against their English source and classifies outdatedness triage signals as strong, moderate, or no signal. |
+| `l10n-outdatedness-triage.py` | This script compares localized Markdown files against their English source and classifies outdatedness triage signals as strong, moderate, weak (lastmod only), or no signal. |
 | `hash-files.sh`         | This script emits as hash for the files listed in $@                                                                                  |
 | `linkchecker.py`        | This a link checker for Kubernetes documentation website.                                                                             |
 | `lsync.sh`              | This script checks if the English version of a page has changed since a localized page has been committed.                            |
@@ -112,18 +112,35 @@ their English source files and assigns signal-based triage categories.
 
 It checks page structure and outdatedness indicators such as line count
 differences, missing headings, missing code blocks, missing anchors,
-Kubernetes version references, and API / feature-state values. It does not
-check translation meaning or quality, so maintainers should manually verify
-flagged results.
+Kubernetes version references, API / feature-state / container image values,
+CLI flags/commands and technical keys in code, front-matter keys and
+structural values, Hugo shortcode attributes/targets, referenced local example
+files under `content/<l10n-lang>/examples/`, and normalized
+internal/official-repo link paths. It does not check translation meaning or
+quality, so maintainers should manually verify flagged results.
 
 The status labels are triage categories, not final judgments:
 
-- `Orphan`: localized file has no matching English source; verify whether
-  it was renamed, removed, or intentionally locale-specific.
-- `Strong signal`: strong indicators suggest the localized page likely
-  needs review or update.
-- `Moderate signal`: some indicators were found, but the page needs
-  manual verification.
+- `Orphan`: localized file has no matching English source; reports whether the
+  English file was moved/renamed, split into multiple files, redirected
+  (`static/_redirects.base`), removed upstream in git history, or never
+  existed in English.
+- `Strong signal`: deterministic structural or token mismatches (headings, code
+  blocks, Kubernetes versions, API/feature-state/image values, front-matter keys
+  or structural values, shortcode attributes, internal/official links, CLI flags
+  or code identifiers, local example files, or severe anchor/markup loss)
+  indicate the localized page needs review or update.
+  - Within `Strong signal`, files are grouped into `Major fix` (headings, code
+    blocks, body length, list/table structure changed, or >4 token items differ)
+    and `Minor fix` (body structure appears intact; only 1–4 metadata, link,
+    shortcode, anchor, or CLI/API/version items differ).
+- `Moderate signal`: heuristic/indirect signals (standalone severe volume or
+  paragraph loss, 1–3 markup token count differences, or 1–2 missing section
+  anchors) were found without deterministic token mismatches; verify manually.
+- `Weak signal (lastmod only)`: English source has a newer git
+  commit timestamp (`lastmod`), with no structural or token signal found
+  (e.g., typo or prose-only edits); verifying and updating is still recommended
+  to clear the outdated notice on `kubernetes.io`.
 - `No signal`: no outdatedness indicators were found by this tool; this
   does not guarantee the translation is fully current.
 
